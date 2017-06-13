@@ -1,0 +1,12 @@
+{
+  "name": "snake",
+  "version": "1.0.0",
+  "description": "old snakey, with friends!",
+  "main": "index.js",
+  "repository": "git@github.com:ellismarkf/snake.git",
+  "author": "Mark Ellis <ellismarkf@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "fast-list": "^1.0.3"
+  }
+}
