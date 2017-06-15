@@ -181,13 +181,6 @@ const directionMap = {
 	[DOWN]: 40
 };
 let CURRENT_DIRECTION = RIGHT;
-const pressedControl = [
-  -1,
-  0, // RIGHT
-  0, // LEFT
-  0, // UP
-  0, // DOWN
-];
 const width = 500;
 const height = 500;
 const cell = 10;
@@ -318,7 +311,6 @@ function initSnakeUpdate() {
       moveSnake[snake.direction](snake);
       interval = 0;
     }
-    snake.paused = 1;
     interval += delta;
   }
 }
@@ -336,28 +328,10 @@ function bindEvents() {
     let key = event.keyCode;
     if (key === 32) running = 0;
     let vector = controlsMap[key];
-    // if (vector && vector !== opposite[direction]) {
-    //   direction = vector;
-    // }
     if (vector) CURRENT_DIRECTION = vector;
   });
 }
 
-function initSnakeControls() {
-  return function(snake) {
-    document.addEventListener('keydown', function(event) {
-      console.log(event);
-      let key = event.keyCode;
-      if (key === 32) running = 0;
-      let vector = controlsMap[key];
-      if (vector && vector !== opposite[snake.direction]) {
-        snake.direction = vector;
-      }
-    });
-  }
-}
-
-const bindSnakeControls = initSnakeControls();
 ////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////
@@ -365,7 +339,6 @@ const bindSnakeControls = initSnakeControls();
 ////////////////////////////////////////////////////////
 
 let snake = initSnake(5);
-// const processInput = initInputProcessing(snake);
 
 function clear() {
   ctx.fillStyle = 'black';
@@ -391,7 +364,6 @@ function main() {
   lag += delta;
   while (lag >= MS_PER_UPDATE) {
     clear();
-    // processInput();
     update(delta);
     draw(delta);
     lag -= MS_PER_UPDATE;
@@ -399,6 +371,5 @@ function main() {
 }
 
 bindEvents();
-// bindSnakeControls(snake);
 placeFood();
 main();
