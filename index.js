@@ -180,22 +180,49 @@ const directionMap = {
 	[RIGHT]: 39,
 	[DOWN]: 40
 };
+let CURRENT_DIRECTION = RIGHT;
+const pressedControl = [
+  -1,
+  0, // RIGHT
+  0, // LEFT
+  0, // UP
+  0, // DOWN
+];
 const width = 500;
 const height = 500;
 const cell = 10;
 const MS_PER_UPDATE = 16;
-const xIdx = 0;
-const yIdx = 1;
+const x = 0;
+const y = 1;
 let then = performance.now();
 let running = 1;
 let lag = 0.0;
-let x = 250;
-let y = 250;
 let DEFAULT_SPEED = 150;
 const MAX_SPEED = 50;
 let direction = RIGHT;
 canvas.height = height;
 canvas.width = width;
+let food = [0,0]; // [x, y]
+////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////
+// food
+////////////////////////////////////////////////////////////////
+
+function placeFood() {
+  food = [
+    Math.floor(Math.random() * width/10) * 10,
+    Math.floor(Math.random() * height/10) * 10,
+  ];
+  return food;
+}
+
+function drawFood(food, ctx) {
+  const [x, y] = food;
+  ctx.fillStyle = 'red';
+  ctx.fillRect(x,y,cell,cell);
+}
+
 
 ////////////////////////////////////////////////////////////////
 
@@ -210,40 +237,64 @@ function initSnake(length) {
     snake.push([startX - (i * 10), 250]);
   }
   snake.speed = DEFAULT_SPEED;
-  snake.direction = RIGHT;
+  snake.direction = CURRENT_DIRECTION;
   return snake;
 }
 
 function drawSnake(snake, ctx) {
   ctx.fillStyle = 'white';
   snake.forEach(function(segment) {
-    ctx.fillRect(segment[xIdx], segment[yIdx], cell, cell);
+    ctx.fillRect(segment[x], segment[y], cell, cell);
   });
 }
 
 function moveRight(snake) {
   let [x, y] = snake.head();
+  let [fX, fY] = food;
   if (x > width - (cell + cell)) running = 0;
   snake.unshift([x + cell, y]);
-  snake.pop();
+  if (x === fX && y === fY) {
+    placeFood();
+    snake.speed -= 10;
+  } else {
+    snake.pop();
+  }
 }
 function moveLeft(snake) {
   let [x, y] = snake.head();
+  let [fX, fY] = food;
   if (x - cell < 0) running = 0;
   snake.unshift([x - cell, y]);
-  snake.pop();
+  if (x === fX && y === fY) {
+    placeFood();
+    snake.speed -= 10;
+  } else {
+    snake.pop();
+  }
 }
 function moveUp(snake) {
   let [x, y] = snake.head();
+  let [fX, fY] = food;
   if (y - cell < 0) running = 0;
   snake.unshift([x, y - cell]);
-  snake.pop();
+  if (x === fX && y === fY) {
+    placeFood();
+    snake.speed -= 10;
+  } else {
+    snake.pop();
+  }
 }
 function moveDown(snake) {
   let [x, y] = snake.head();
+  let [fX, fY] = food;
   if (y > height - (cell + cell)) running = 0;
   snake.unshift([x, y + cell]);
-  snake.pop();
+  if (x === fX && y === fY) {
+    placeFood();
+    snake.speed -= 10;
+  } else {
+    snake.pop();
+  }
 }
 
 const moveSnake = {
@@ -253,13 +304,21 @@ const moveSnake = {
   [DOWN]: moveDown,
 }
 
+function processInput(snake) {
+  if (CURRENT_DIRECTION !== opposite[snake.direction]) {
+    snake.direction = CURRENT_DIRECTION;
+  }
+}
+
 function initSnakeUpdate() {
   let interval = 0;
   return function(snake, delta) {
     if (interval > snake.speed) {
+      processInput(snake);
       moveSnake[snake.direction](snake);
       interval = 0;
     }
+    snake.paused = 1;
     interval += delta;
   }
 }
@@ -277,15 +336,17 @@ function bindEvents() {
     let key = event.keyCode;
     if (key === 32) running = 0;
     let vector = controlsMap[key];
-    if (vector && vector !== opposite[direction]) {
-      direction = vector;
-    }
+    // if (vector && vector !== opposite[direction]) {
+    //   direction = vector;
+    // }
+    if (vector) CURRENT_DIRECTION = vector;
   });
 }
 
 function initSnakeControls() {
   return function(snake) {
     document.addEventListener('keydown', function(event) {
+      console.log(event);
       let key = event.keyCode;
       if (key === 32) running = 0;
       let vector = controlsMap[key];
@@ -297,7 +358,6 @@ function initSnakeControls() {
 }
 
 const bindSnakeControls = initSnakeControls();
-
 ////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////
@@ -305,6 +365,7 @@ const bindSnakeControls = initSnakeControls();
 ////////////////////////////////////////////////////////
 
 let snake = initSnake(5);
+// const processInput = initInputProcessing(snake);
 
 function clear() {
   ctx.fillStyle = 'black';
@@ -313,6 +374,7 @@ function clear() {
 
 function draw() {
   drawSnake(snake, ctx);
+  drawFood(food, ctx);
 }
 
 function update(delta) {
@@ -329,11 +391,14 @@ function main() {
   lag += delta;
   while (lag >= MS_PER_UPDATE) {
     clear();
+    // processInput();
     update(delta);
     draw(delta);
     lag -= MS_PER_UPDATE;
   }
 }
 
-bindSnakeControls(snake);
+bindEvents();
+// bindSnakeControls(snake);
+placeFood();
 main();
