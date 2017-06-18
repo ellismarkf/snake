@@ -106,6 +106,24 @@ FastList.prototype =
     }
   }
 
+, every: function (fn, start, thisp) {
+    var p = start ? this._head.next : this._head
+      , i = start || 0
+      , len = this.length
+      , pass = true;
+    while (i < len && p) {
+      let val = fn.call(this, p.data, i, this);
+      if (val) {
+        p = p.next
+        i ++
+      } else {
+        pass = false;
+        break;
+      }
+    }
+    return pass;
+}
+
 , map: function (fn, thisp) {
     var n = new FastList()
     this.forEach(function (v, i, me) {
@@ -196,6 +214,7 @@ let direction = RIGHT;
 canvas.height = height;
 canvas.width = width;
 let food = [0,0]; // [x, y]
+let snakeId = 1;
 ////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////
@@ -223,78 +242,87 @@ function drawFood(food, ctx) {
 // snake
 ////////////////////////////////////////////////////////////////
 
-function initSnake(length) {
+function initSnake(init) {
   let startX = 250;
   let snake = new FastList();
+  let speed = init.speed || DEFAULT_SPEED;
+  let length = init.length || 5;
+  let color = init.color || 'white';
   for(let i = 0; i < length; i++) {
     snake.push([startX - (i * 10), 250]);
+    // snake.push([0,0]);
   }
-  snake.speed = DEFAULT_SPEED;
+  snake.speed = speed || DEFAULT_SPEED;
   snake.direction = CURRENT_DIRECTION;
+  snake.color = color;
+  snake.id = snakeId;
+  snakeId++;
   return snake;
 }
 
 function drawSnake(snake, ctx) {
-  ctx.fillStyle = 'white';
+  ctx.fillStyle = snake.color;
   snake.forEach(function(segment) {
     ctx.fillRect(segment[x], segment[y], cell, cell);
   });
 }
 
-function moveRight(snake) {
-  let [x, y] = snake.head();
-  let [fX, fY] = food;
-  if (x > width - (cell + cell)) running = 0;
-  snake.unshift([x + cell, y]);
-  if (x === fX && y === fY) {
-    placeFood();
-    snake.speed -= 10;
-  } else {
-    snake.pop();
-  }
-}
-function moveLeft(snake) {
-  let [x, y] = snake.head();
-  let [fX, fY] = food;
-  if (x - cell < 0) running = 0;
-  snake.unshift([x - cell, y]);
-  if (x === fX && y === fY) {
-    placeFood();
-    snake.speed -= 10;
-  } else {
-    snake.pop();
-  }
-}
-function moveUp(snake) {
-  let [x, y] = snake.head();
-  let [fX, fY] = food;
-  if (y - cell < 0) running = 0;
-  snake.unshift([x, y - cell]);
-  if (x === fX && y === fY) {
-    placeFood();
-    snake.speed -= 10;
-  } else {
-    snake.pop();
-  }
-}
-function moveDown(snake) {
-  let [x, y] = snake.head();
-  let [fX, fY] = food;
-  if (y > height - (cell + cell)) running = 0;
-  snake.unshift([x, y + cell]);
-  if (x === fX && y === fY) {
-    placeFood();
-    snake.speed -= 10;
-  } else {
-    snake.pop();
+function outOfBounds(direction, x, y) {
+  switch(direction) {
+    case RIGHT:
+      return x > width - (cell * 2);
+    case LEFT:
+      return x - cell < 0;
+    case UP:
+      return y - cell < 0;
+    case DOWN:
+      return y > height - (cell * 2);
+   default:
+    return false;
   }
 }
 
-const moveSnake = {
-  [RIGHT]: moveRight,
-  [LEFT]: moveLeft,
-  [UP]: moveUp,
-  [DOWN]: moveDown,
+function newHeadPos(direction, x, y) {
+  switch(direction) {
+    case RIGHT:
+      return [x + cell, y];
+    case LEFT:
+      return [x - cell, y];
+    case UP:
+      return [x, y - cell];
+    case DOWN:
+      return [x, y + cell];
+   default:
+    return [x, y];
+  }
+}
+
+function selfCollision(x,y,bX,bY) {
+  return x === bX && y === bY;
+}
+
+function advance(snake) {
+  let [x, y] = snake.head();
+  const autoCannibalism = !snake.every(function(segment, index) {
+    let [bX, bY] = segment;
+    return !(selfCollision(x,y,bX,bY));
+  }, 1);
+  if (
+    outOfBounds(snake.direction, x, y)
+    || autoCannibalism
+  ) {
+    console.log('game over');
+    running = 0;
+    return -1;
+  }
+  let [fX, fY] = food;
+  snake.unshift(newHeadPos(snake.direction, x, y));
+  if (x === fX && y === fY) {
+    placeFood();
+    snake.speed -= 10;
+  } else {
+    snake.pop();
+  }
 }
 
 function processInput(snake) {
@@ -308,14 +336,12 @@ function initSnakeUpdate() {
   return function(snake, delta) {
     if (interval > snake.speed) {
       processInput(snake);
-      moveSnake[snake.direction](snake);
+      advance(snake);
       interval = 0;
     }
     interval += delta;
   }
 }
-
-const updateSnake = initSnakeUpdate();
 
 ///////////////////////////////////////////////////////
 
@@ -338,7 +364,12 @@ function bindEvents() {
 // game engine
 ////////////////////////////////////////////////////////
 
-let snake = initSnake(5);
+let snake = initSnake({ length: 5, speed: 200, color: 'blue' });
+let snake2 = initSnake({ length: 5, speed: 200, color: 'green' });
+let snakes = [snake];
+let updateFns = snakes.map(function(snake) {
+  return initSnakeUpdate();
+});
 
 function clear() {
   ctx.fillStyle = 'black';
@@ -346,12 +377,15 @@ function clear() {
 };
 
 function draw() {
-  drawSnake(snake, ctx);
   drawFood(food, ctx);
+  drawSnake(snake, ctx);
+  drawSnake(snake2, ctx);
 }
 
 function update(delta) {
-  updateSnake(snake, delta);
+  for(let i = 0; i < snakes.length; i++) {
+    updateFns[i](snakes[i], delta);
+  }
 }
 
 function main() {
@@ -365,7 +399,7 @@ function main() {
   while (lag >= MS_PER_UPDATE) {
     clear();
     update(delta);
-    draw(delta);
+    draw();
     lag -= MS_PER_UPDATE;
   }
 }
