@@ -7,7 +7,17 @@
   </head>
   <body>
     <canvas id="snake-game" height="500" width="500"></canvas>
+    <button id="start">Start Game</button>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
+    <script src="./dq.js"></script>
     <script src="./index.js"></script>
+    <script>
+      var startBtn = document.getElementById('start');
+      console.log(startBtn);
+      startBtn.addEventListener('click', function(e) {
+        console.log('button clicked');
+        initGame();
+      });
+    </script>
   </body>
 </html>

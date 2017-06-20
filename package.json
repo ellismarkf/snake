@@ -7,6 +7,10 @@
   "author": "Mark Ellis <ellismarkf@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "fast-list": "^1.0.3"
+    "body-parser": "^1.17.2",
+    "express": "^4.15.3",
+    "fast-list": "^1.0.3",
+    "helmet": "^3.6.1",
+    "socket.io": "^2.0.3"
   }
 }

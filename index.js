@@ -1,181 +1,10 @@
-////////////////////////////////////////////////
-// fast-list
-////////////////////////////////////////////////
-
-;(function() { // closure for web browsers
-
-function Item (data, prev, next) {
-  this.next = next
-  if (next) next.prev = this
-  this.prev = prev
-  if (prev) prev.next = this
-  this.data = data
-}
-
-function FastList () {
-  if (!(this instanceof FastList)) return new FastList
-  this._head = null
-  this._tail = null
-  this.length = 0
-}
-
-FastList.prototype =
-{ push: function (data) {
-    this._tail = new Item(data, this._tail, null)
-    if (!this._head) this._head = this._tail
-    this.length ++
-  }
-
-, pop: function () {
-    if (this.length === 0) return undefined
-    var t = this._tail
-    this._tail = t.prev
-    if (t.prev) {
-      t.prev = this._tail.next = null
-    }
-    this.length --
-    if (this.length === 1) this._head = this._tail
-    else if (this.length === 0) this._head = this._tail = null
-    return t.data
-  }
-
-, unshift: function (data) {
-    this._head = new Item(data, null, this._head)
-    if (!this._tail) this._tail = this._head
-    this.length ++
-  }
-
-, shift: function () {
-    if (this.length === 0) return undefined
-    var h = this._head
-    this._head = h.next
-    if (h.next) {
-      h.next = this._head.prev = null
-    }
-    this.length --
-    if (this.length === 1) this._tail = this._head
-    else if (this.length === 0) this._head = this._tail = null
-    return h.data
-  }
-
-, item: function (n) {
-    if (n < 0) n = this.length + n
-    var h = this._head
-    while (n-- > 0 && h) h = h.next
-    return h ? h.data : undefined
-  }
-
-, slice: function (n, m) {
-    if (!n) n = 0
-    if (!m) m = this.length
-    if (m < 0) m = this.length + m
-    if (n < 0) n = this.length + n
-
-    if (m === n) {
-      return []
-    }
-
-    if (m < n) {
-      throw new Error("invalid offset: "+n+","+m+" (length="+this.length+")")
-    }
-
-    var len = m - n
-      , ret = new Array(len)
-      , i = 0
-      , h = this._head
-    while (n-- > 0 && h) h = h.next
-    while (i < len && h) {
-      ret[i++] = h.data
-      h = h.next
-    }
-    return ret
-  }
-
-, drop: function () {
-    FastList.call(this)
-  }
-
-, forEach: function (fn, thisp) {
-    var p = this._head
-      , i = 0
-      , len = this.length
-    while (i < len && p) {
-      fn.call(thisp || this, p.data, i, this)
-      p = p.next
-      i ++
-    }
-  }
-
-, every: function (fn, start, thisp) {
-    var p = start ? this._head.next : this._head
-      , i = start || 0
-      , len = this.length
-      , pass = true;
-    while (i < len && p) {
-      let val = fn.call(this, p.data, i, this);
-      if (val) {
-        p = p.next
-        i ++
-      } else {
-        pass = false;
-        break;
-      }
-    }
-    return pass;
-}
-
-, map: function (fn, thisp) {
-    var n = new FastList()
-    this.forEach(function (v, i, me) {
-      n.push(fn.call(thisp || me, v, i, me))
-    })
-    return n
-  }
-
-, filter: function (fn, thisp) {
-    var n = new FastList()
-    this.forEach(function (v, i, me) {
-      if (fn.call(thisp || me, v, i, me)) n.push(v)
-    })
-    return n
-  }
-
-, reduce: function (fn, val, thisp) {
-    var i = 0
-      , p = this._head
-      , len = this.length
-    if (!val) {
-      i = 1
-      val = p && p.data
-      p = p && p.next
-    }
-    while (i < len && p) {
-      val = fn.call(thisp || this, val, p.data, this)
-      i ++
-      p = p.next
-    }
-    return val
-  }
-, head: function() {
-    return this._head.data;
-  }
-}
-
-if ("undefined" !== typeof(exports)) module.exports = FastList
-else if ("function" === typeof(define) && define.amd) {
-  define("FastList", function() { return FastList })
-} else (function () { return this })().FastList = FastList
-
-})()
-
-///////////////////////////////////////////////////////////
-
 ///////////////////////////////////////////////////////////
 // constants & defaults
 ///////////////////////////////////////////////////////////
 
 const canvas = document.getElementById('snake-game');
 const ctx = canvas.getContext("2d");
+const socket = window.io();
 const RIGHT = 1;
 const LEFT = 2;
 const UP = 3;
@@ -206,7 +35,7 @@ const MS_PER_UPDATE = 16;
 const x = 0;
 const y = 1;
 let then = performance.now();
-let running = 1;
+let running = 0;
 let lag = 0.0;
 let DEFAULT_SPEED = 150;
 const MAX_SPEED = 50;
@@ -260,8 +89,25 @@ function initSnake(init) {
   return snake;
 }
 
+function initQSnake(init) {
+  let startX = 250;
+  let speed = init.speed || DEFAULT_SPEED;
+  let length = init.length || 5;
+  let color = init.color || 'white';
+  let snake = new window.Deque((width * height) / 100);
+  for(let i = 0; i < length; i++) {
+    snake.push([startX - (i * 10), 250]);
+  }
+  snake.speed = speed || DEFAULT_SPEED;
+  snake.direction = CURRENT_DIRECTION;
+  snake.color = color;
+  snake.id = snakeId;
+  snakeId++;
+  return snake;
+}
+
 function drawSnake(snake, ctx) {
-  ctx.fillStyle = snake.color;
+  ctx.fillStyle = snake.color || 'green';
   snake.forEach(function(segment) {
     ctx.fillRect(segment[x], segment[y], cell, cell);
   });
@@ -303,25 +149,45 @@ function selfCollision(x,y,bX,bY) {
 
 function advance(snake) {
   let [x, y] = snake.head();
-  const autoCannibalism = !snake.every(function(segment, index) {
+  const autoCannibalism = !snake.everyFrom(function(segment, index) {
     let [bX, bY] = segment;
     return !(selfCollision(x,y,bX,bY));
   }, 1);
-  if (
-    outOfBounds(snake.direction, x, y)
-    || autoCannibalism
-  ) {
+  const boundaryViolation = outOfBounds(snake.direction, x, y);
+  if (boundaryViolation || autoCannibalism) {
     console.log('game over');
     running = 0;
+    socket.emit('game-over');
     return -1;
   }
   let [fX, fY] = food;
   snake.unshift(newHeadPos(snake.direction, x, y));
   if (x === fX && y === fY) {
+    socket.emit('update-food-position');
     placeFood();
     snake.speed -= 10;
+    socket.emit('opponent-update', {
+      snake: snake,
+      id: snake.id,
+      direction: snake.direction,
+      speed: snake.speed,
+      front: snake._front,
+      length: snake.length,
+      color: snake.color,
+      capacity: snake._capacity,
+    });
   } else {
     snake.pop();
+    socket.emit('opponent-update', {
+      snake: snake,
+      id: snake.id,
+      direction: snake.direction,
+      speed: snake.speed,
+      front: snake._front,
+      length: snake.length,
+      color: snake.color,
+      capacity: snake._capacity,
+    });
   }
 }
 
@@ -364,12 +230,35 @@ function bindEvents() {
 // game engine
 ////////////////////////////////////////////////////////
 
-let snake = initSnake({ length: 5, speed: 200, color: 'blue' });
-let snake2 = initSnake({ length: 5, speed: 200, color: 'green' });
-let snakes = [snake];
-let updateFns = snakes.map(function(snake) {
-  return initSnakeUpdate();
+let snake;
+let opponent;
+let updateSnake;
+// let snake2 = initSnake({ length: 5, speed: 200, color: 'green' });
+
+// let snakes = [snake];
+// let updateFns = snakes.map(function(snake) {
+//   return initSnakeUpdate();
+// });
+
+socket.on('connected', function() {
+  // socket.emit('snake-request', { width, height });
 });
+
+socket.on('init-player', function(data) {
+  // snake = initQSnake(data);
+  // console.log('init-player');
+});
+
+socket.on('init-opponent', function(data) {
+  // opponent = initQSnake(data);
+  // console.log('init-opponent');
+});
+
+socket.on('update-opponent', function(data) {
+  // opponent = data;
+});
+
+socket.on('game-over', function() { running = 0; });
 
 function clear() {
   ctx.fillStyle = 'black';
@@ -378,14 +267,17 @@ function clear() {
 
 function draw() {
   drawFood(food, ctx);
+  // drawSnake(opponent.snake, ctx);
+  drawSnake(opponent, ctx);
   drawSnake(snake, ctx);
-  drawSnake(snake2, ctx);
+  // drawSnake(snake3, ctx);
 }
 
 function update(delta) {
-  for(let i = 0; i < snakes.length; i++) {
-    updateFns[i](snakes[i], delta);
-  }
+  // for(let i = 0; i < snakes.length; i++) {
+  //   updateFns[i](snakes[i], delta);
+  // }
+  updateSnake(snake, delta);
 }
 
 function main() {
@@ -404,6 +296,15 @@ function main() {
   }
 }
 
-bindEvents();
-placeFood();
-main();
+function initGame() {
+  bindEvents();
+  placeFood();
+  console.log(snake);
+  snake = initQSnake({});
+  opponent = initQSnake({ length: 7, color: 'blue' });
+  updateSnake = initSnakeUpdate(snake);
+  then = performance.now();
+  running = 1;
+  main();
+}
+
