@@ -202,6 +202,34 @@ Deque.prototype.everyFrom = function Deque$everyFrom(fn, start) {
   return pass;
 }
 
+Deque.prototype.findIndex = function Deque$findIndex(fn) {
+  let index = -1;
+  for (var n = 0; n < this._length; n++) {
+    var i = (this._front + n) & (this._capacity - 1);
+    let val = fn.call(this, this[i], n, i, this);
+    if (val) {
+      index = i;
+      break;
+    }
+  }
+  return index;
+}
+
+Deque.prototype.sliceFrom = function Deque$sliceFrom(begin) {
+  let sliced = [];
+  let length = this._length;
+  for (var n = 0; n < this._length; n++) {
+    var i = (this._front + n) & (this._capacity - 1);
+    if (i >= begin) {
+      sliced.push(this[i]);
+      this[i] = void 0;
+      // this._length = length - 1;
+    }
+  }
+  this._length = length - sliced.length;
+  return sliced;
+}
+
 Deque.prototype.peekBack = function Deque$peekBack() {
   var length = this._length;
   if (length === 0) {
