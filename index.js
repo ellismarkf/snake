@@ -95,7 +95,7 @@ function initQSnake(init) {
   let speed = init.speed || DEFAULT_SPEED;
   let length = init.length || 5;
   let color = init.color || 'white';
-  let snake = new window.Deque((width * height) / 100);
+  let snake = new window.Snaque((width * height) / 100);
   for(let i = 0; i < length; i++) {
     snake.push([startX - (i * 10), 250]);
   }
@@ -111,7 +111,7 @@ function initOpponent(init) {
   let speed = init.speed || DEFAULT_SPEED;
   let length = init.length || 5;
   let color = init.color || 'white';
-  let snake = new window.Deque((width * height) / 100);
+  let snake = new window.Snaque((width * height) / 100);
   for(let i = 0; i < length; i++) {
     snake.push([startX - (i * 10), 0]);
   }
@@ -266,36 +266,18 @@ function advanceOpponent(snake) {
     const [fX, fY] = food[fIdx];
     if (fIdx === 0) {
       food[0] = placeFood();
-//   socket.emit('update-food-position');
+      // socket.emit('update-food-position');
       snake.speed -= 10;
     } else {
       food[fIdx] = 0;
       foodLength--;
-//   socket.emit('update-food-position');
+      // socket.emit('update-food-position');
       snake.speed -= 10;
-  //   socket.emit('opponent-update', {
-  //     snake: snake,
-  //     id: snake.id,
-  //     direction: snake.direction,
-  //     speed: snake.speed,
-  //     front: snake._front,
-  //     length: snake.length,
-  //     color: snake.color,
-  //     capacity: snake._capacity,
-  //   });
+      socket.emit('opponent-update', [snake.x, snake.y]);
     }
   } else {
     snake.pop();
-//   socket.emit('opponent-update', {
-//     snake: snake,
-//     id: snake.id,
-//     direction: snake.direction,
-//     speed: snake.speed,
-//     front: snake._front,
-//     length: snake.length,
-//     color: snake.color,
-//     capacity: snake._capacity,
-//   });
+    socket.emit('opponent-update', [snake.x, snake.y]);
   }
 }
 
@@ -430,6 +412,7 @@ function initGame() {
   food[foodLength] = placeFood();
   hero = initQSnake({});
   opponent = initOpponent({ length: 7, color: 'blue' });
+  // console.log(opponent);
   updateSnake = initSnakeUpdate(hero);
   updateOpponent = initOpponentUpdate(opponent);
   then = performance.now();
