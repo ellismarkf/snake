@@ -21,30 +21,19 @@ const controlsMap = {
 	39: RIGHT,
 	40: DOWN,
 };
-const o_controlsMap = {
-	65: LEFT,
-	87: UP,
-	68: RIGHT,
-	83: DOWN,
-};
 const directionMap = {
 	[LEFT]: 37,
 	[UP]: 38,
 	[RIGHT]: 39,
 	[DOWN]: 40,
 };
-const o_directionMap = {
-	[LEFT]: 65,
-	[UP]: 87,
-	[RIGHT]: 68,
-	[DOWN]: 83,
-};
 let CURRENT_DIRECTION = RIGHT;
-let OPPONENT_DIRECTION = RIGHT;
 const width = 500;
 const height = 500;
 const cell = 10;
 const MS_PER_UPDATE = 16;
+const x = 0;
+const y = 1;
 let then = performance.now();
 let running = 0;
 let lag = 0.0;
@@ -53,17 +42,17 @@ const MAX_SPEED = 50;
 let direction = RIGHT;
 canvas.height = height;
 canvas.width = width;
-let food = new Array(50); // array of food coordinates [x, y]
-for (let i = 0; i < food.length; i++) {
-  food[i] = 0;
-}
-let foodLength = 0;
 let snakeId = 1;
 ////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////
 // food
 ////////////////////////////////////////////////////////////////
+let food = new Array(50); // array of food coordinates [x, y]
+for (let i = 0; i < food.length; i++) {
+  food[i] = 0;
+}
+let foodLength = 0;
 
 function placeFood() {
   return [
@@ -88,11 +77,11 @@ function drawFood(food, ctx) {
 // snake
 ////////////////////////////////////////////////////////////////
 
-function initQSnake(init) {
+function initSnake(opts) {
   let startX = 250;
-  let speed = init.speed || DEFAULT_SPEED;
-  let length = init.length || 5;
-  let color = init.color || 'white';
+  let speed = opts.speed || DEFAULT_SPEED;
+  let length = opts.length || 5;
+  let color = opts.color || 'white';
   let snake = new window.Snaque((width * height) / 100);
   for(let i = 0; i < length; i++) {
     snake.push([startX - (i * 10), 250, CURRENT_DIRECTION]);
@@ -104,28 +93,11 @@ function initQSnake(init) {
   snakeId++;
   return snake;
 }
-function initOpponent(init) {
-  let startX = 70;
-  let speed = init.speed || DEFAULT_SPEED;
-  let length = init.length || 5;
-  let color = init.color || 'white';
-  let id = init.id || snakeId;
-  let snake = new window.Snaque((width * height) / 100);
-  for(let i = 0; i < length; i++) {
-    snake.push([startX - (i * 10), 0, OPPONENT_DIRECTION]);
-  }
-  snake.speed = speed;
-  snake.direction = OPPONENT_DIRECTION;
-  snake.color = color;
-  snake.id = id;
-  snakeId++;
-  return snake;
-}
 
 function drawSnake(snake, ctx) {
   ctx.fillStyle = snake.color || 'green';
   snake.forEach(function(segment) {
-    ctx.fillRect(segment[0], segment[1], cell, cell);
+    ctx.fillRect(segment[x], segment[y], cell, cell);
   });
 }
 
@@ -163,8 +135,8 @@ function collision(x,y,bX,bY) {
   return x === bX && y === bY;
 }
 
-function freeze(snake) {
-  snake.frozen = 1;
+function logTick(x,y,hX,hY,tX,tY) {
+  console.log('tick\n' + 'head[x, y]: ' + `[${x}, ${y}]\n` + 'heroHead[x, y]: ' + `[${hX}, ${hY}]\n` + 'heroTail[x, y]: ' + `[${tX}, ${tY}]`);
 }
 
 function advance(snake) {
@@ -243,117 +215,18 @@ function advance(snake) {
   }
 }
 
-function logTick(x,y,hX,hY,tX,tY) {
-  console.log('tick\n' + 'head[x, y]: ' + `[${x}, ${y}]\n` + 'heroHead[x, y]: ' + `[${hX}, ${hY}]\n` + 'heroTail[x, y]: ' + `[${tX}, ${tY}]`);
-}
-
-function advanceOpponent(snake) {
-  let [x, y] = snake.head();
-  let [hX, hY] = hero.head();
-  let [tX, tY] = hero.tail();
-  const autoCannibalism = !snake.everyFrom(function(segment) {
-    let [bX, bY] = segment;
-    return !(collision(x,y,bX,bY));
-  }, 1);
-  const boundaryViolation = outOfBounds(snake.direction, x, y);
-  if (boundaryViolation || autoCannibalism) {
-    running = 0;
-    console.log('game over - self destruct');
-    socket.emit('game-over:self-destruct');
-    return -1;
-  }
-  const opponentCollisionIdx = hero.findIndex(function(segment) {
-    let [bX, bY] = segment;
-    return collision(x,y,bX,bY);
-  });
-  if (hero.frozen && opponentCollisionIdx < 0) {
-    hero.frozen = 0;
-  }
-  if (opponentCollisionIdx === hero.headIndex && snake.direction !== hero.direction) {
-    running = 0;
-    console.log('game over - heads collide!');
-    socket.emit('game-over:heads-collide');
-    return -1;
-  }
-  if (opponentCollisionIdx === hero.tailIndex) {
-    if (!hero.frozen) {
-      hero.frozen = 1;
-    }
-    if (hero.tailIndex === hero.headIndex) {
-      running = 0;
-      console.log('game over - opponent ate hero and won the game!');
-      socket.emit('game-over:opponent-win');
-      return -1;
-    } else {
-      hero.pop();
-      // socket.emit('opponent-eating');
-      snake.unshift(newHeadPos(snake.direction, x, y));
-      snake.speed -= 10;
-      return 1;
-    }
-  }
-  if (opponentCollisionIdx > -1) {
-    let sliced = hero.sliceFrom(opponentCollisionIdx);
-    hero.speed += sliced.length * 10;
-    for (let i = 1; i < sliced.length; i++) {
-      foodLength++;
-      food[foodLength] = sliced[i];
-    }
-  }
-  snake.unshift(newHeadPos(snake.direction, x, y));
-  let fIdx = food.findIndex(function(food) {
-    return collision(x,y,food[0],food[1])
-  });
-  if (fIdx > -1) {
-    const [fX, fY] = food[fIdx];
-    if (fIdx === 0) {
-      food[0] = placeFood();
-      // socket.emit('update-food-position');
-      snake.speed -= 10;
-    } else {
-      food[fIdx] = 0;
-      foodLength--;
-      // socket.emit('update-food-position');
-      snake.speed -= 10;
-      // socket.emit('opponent-update', [snake.x, snake.y]);
-    }
-  } else {
-    snake.pop();
-    // socket.emit('opponent-update', [snake.x, snake.y]);
-  }
-}
-
 function processInput(snake) {
   if (CURRENT_DIRECTION !== opposite[snake.direction]) {
     snake.direction = CURRENT_DIRECTION;
   }
 }
 
-function processOpponentInput(snake) {
-  if (OPPONENT_DIRECTION !== opposite[snake.direction]) {
-    snake.direction = OPPONENT_DIRECTION;
-  }
-}
-
 function initSnakeUpdate() {
   let interval = 0;
   return function(snake, delta) {
-    if (snake.frozen) return;
     if (interval > snake.speed) {
       processInput(snake);
       advance(snake);
-      interval = 0;
-    }
-    interval += delta;
-  }
-}
-function initOpponentUpdate() {
-  let interval = 0;
-  return function(snake, delta) {
-    if (snake.frozen) return;
-    if (interval > snake.speed) {
-      processOpponentInput(snake);
-      advanceOpponent(snake);
       interval = 0;
     }
     interval += delta;
@@ -395,19 +268,18 @@ function bindLocalTwoPlayerEvents() {
 let hero;
 let opponent;
 let updateSnake;
-let updateOpponent;
 
 socket.on('connected', function() {
   // socket.emit('snake-request', { width, height });
 });
 
 socket.on('init-player', function(data) {
-  // snake = initQSnake(data);
+  // snake = initSnake(data);
   // console.log('init-player');
 });
 
 socket.on('init-opponent', function(data) {
-  // opponent = initQSnake(data);
+  // opponent = initSnake(data);
   // console.log('init-opponent');
 });
 
@@ -425,23 +297,12 @@ function clear() {
 function draw() {
   drawFood(food, ctx);
   // drawSnake(opponent.snake, ctx);
-  if (hero.frozen) {
-    drawSnake(hero, ctx);
-    drawSnake(opponent, ctx);
-    return 1;
-  }
-  if (opponent.frozen) {
-    drawSnake(opponent, ctx);
-    drawSnake(hero, ctx);
-    return 1;
-  }
-  drawSnake(hero, ctx);
   drawSnake(opponent, ctx);
+  drawSnake(hero, ctx);
 }
 
 function update(delta) {
   updateSnake(hero, delta);
-  updateOpponent(opponent, delta);
 }
 
 function main() {
@@ -461,14 +322,12 @@ function main() {
 }
 
 function initGame() {
-  // bindEvents();
-  bindLocalTwoPlayerEvents();
+  bindEvents();
+  // bindLocalTwoPlayerEvents();
   food[foodLength] = placeFood();
-  hero = initQSnake({});
-  opponent = initOpponent({ color: 'blue' });
-  // console.log(opponent);
+  hero = initSnake({});
+  // opponent = initOpponent({ length: 7, color: 'blue' });
   updateSnake = initSnakeUpdate(hero);
-  updateOpponent = initOpponentUpdate(opponent);
   then = performance.now();
   running = 1;
   main();
