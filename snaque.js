@@ -265,6 +265,11 @@ Object.defineProperties(Snaque.prototype, {
       return this._head;
     }
   },
+  headDirection: {
+    get() {
+      return this._directions[this._head];
+    }
+  },
   tailIndex: {
     get() {
       return this._tail;

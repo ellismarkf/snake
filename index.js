@@ -93,6 +93,7 @@ function initQSnake(init) {
   let speed = init.speed || DEFAULT_SPEED;
   let length = init.length || 5;
   let color = init.color || 'white';
+  let id = init.id || snakeId;
   let snake = new window.Snaque((width * height) / 100);
   for(let i = 0; i < length; i++) {
     snake.push([startX - (i * 10), 250, CURRENT_DIRECTION]);
@@ -100,7 +101,7 @@ function initQSnake(init) {
   snake.speed = speed;
   snake.direction = CURRENT_DIRECTION;
   snake.color = color;
-  snake.id = snakeId;
+  snake.id = id;
   snakeId++;
   return snake;
 }

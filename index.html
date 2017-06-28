@@ -7,16 +7,14 @@
   </head>
   <body>
     <canvas id="snake-game" height="500" width="500"></canvas>
-    <button id="start">Start Game</button>
+    <div>
+      <button id="create">Create Game</button>
+      <button id="join">Join Game</button>
+      <button id="start">Start Game</button>
+    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
     <script src="./dq.js"></script>
     <script src="./snaque.js"></script>
-    <script src="./index.js"></script>
-    <script>
-      var startBtn = document.getElementById('start');
-      startBtn.addEventListener('click', function(e) {
-        initGame();
-      });
-    </script>
+    <script src="./game.js"></script>
   </body>
 </html>
