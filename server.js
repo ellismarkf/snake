@@ -4,46 +4,40 @@ const express = require('express');
 const helmet = require('helmet');
 const parser = require('body-parser');
 const PORT = process.env.PORT || 5000;
+const width = 500;
+const height = 500;
 
-const dq = require('./dq');
- 
-let id = 1;
-let snakeCount = 0;
-let snakes = []; // array of two snake objects, reset when length > 2
-let rooms = []; // array of ids
-let games = []; // array of snakes<Array>
-const DEFAULT_SPEED = 200;
-const DEFAULT_DIRECTION = 1;
-const DEFAULT_WIDTH = 500;
-const DEFAULT_HEIGHT = 500;
-let width = DEFAULT_WIDTH;
-let height = DEFAULT_HEIGHT;
-
-function initSnake(init) {
-  let startX = 250;
-  let speed = init.speed || DEFAULT_SPEED;
-  let length = init.length || 5;
-  let color = init.color || 'white';
-  let width = init.width || DEFAULT_WIDTH;
-  let height = init.height || DEFAULT_HEIGHT;
-  let snake = new dq((width * height) / 100);
-  for(let i = 0; i < length; i++) {
-    snake.push([startX - (i * 10), 250]);
-  }
-  snake.speed = speed;
-  snake.direction = DEFAULT_DIRECTION;
-  snake.color = color;
-  snake.id = init.id || id;
-  snakeCount++;
-  return snake;
-}
-
-let food = [0,0]; // [x, y]
 function placeFood() {
   return [
     Math.floor(Math.random() * width/10) * 10,
     Math.floor(Math.random() * height/10) * 10,
   ];
+}
+
+function buildHostInit(id) {
+  return {
+    startX: 250,
+    startY: 250,
+    speed: 250,
+    direction: 1,
+    length: 5,
+    color: 'white',
+    frozen: 0,
+    id: id,
+  };
+}
+
+function buildGuestInit(id) {
+  return {
+    startX: 250,
+    startY: 50,
+    speed: 250,
+    direction: 1,
+    length: 5,
+    color: 'blue',
+    frozen: 0,
+    id: id,
+  };
 }
 
 const app = express();
@@ -60,66 +54,62 @@ var server = require('http').createServer(app);
 var io = require('socket.io')(server);
 
 io.on('connection', function(socket) {
-  if (snakeCount % 2 === 1) {
-
-  }
   socket.emit('connected');
-  if (snakes.length > 0) {
-    socket.emit('init-opponent', snakes[0]);
-  }
-  socket.on('game-over', function() {
-    socket.broadcast.emit('game-over');
+
+  socket.on('create-game', function() {
+    socket.emit('new-game-created', buildHostInit(socket.id.toString()));
+    socket.join(socket.id.toString());
   });
-  socket.on('snake-request', function(data) {
-    let snake;
-    if (snakes.length > 0) {
-      console.log('init second player snake');
-      snake = initSnake(data);
-      snakes.push(snake);
-      socket.emit('init-player', {
-        snake: snake,
-        id: snake.id,
-        direction: snake.direction,
-        speed: snake.speed,
-        front: snake._front,
-        length: snake.length,
-        color: snake.color,
-        capacity: snake._capacity,
-      });
-      socket.broadcast.emit('init-opponent', {
-        snake: snake,
-        id: snake.id,
-        direction: snake.direction,
-        speed: snake.speed,
-        front: snake._front,
-        length: snake.length,
-        color: snake.color,
-        capacity: snake._capacity,
-      });
-    } else {
-      snake = initSnake(data);
-      snakes.push(snake);
-      socket.emit('init-player', {
-        snake: snake,
-        id: snake.id,
-        direction: snake.direction,
-        speed: snake.speed,
-        front: snake._front,
-        length: snake.length,
-        color: snake.color,
-        capacity: snake._capacity,
-      });
-    }
+
+  socket.on('join-game', function(room) {
+    let host = buildHostInit(room);
+    let guest = buildGuestInit(room);
+    socket.emit('joined-game', guest, host);
+    socket.join(room);
+    socket.to(room).broadcast.emit('guest-joined-game', guest);
+    io.to(room).emit('update-food-position', placeFood());
   });
-  socket.on('opponent-update', function(data) {
-    socket.broadcast.emit('update-opponent', data);
+
+  socket.on('pop-opponent', function(roomId) {
+    socket.to(roomId).broadcast.emit('pop-hero');
   });
-  socket.on('update-food-position', function() {
-    io.emit('new-food', placeFood());
+  socket.on('freeze-opponent', function(roomId) {
+    socket.to(roomId).broadcast.emit('freeze-hero');
+  });
+  socket.on('unfreeze-opponent', function(roomId) {
+    socket.to(roomId).broadcast.emit('unfreeze-hero');
+  });
+  socket.on('slice-opponent', function(roomId, index) {
+    socket.to(roomId).broadcast.emit('slice-hero', index);
+  });
+  socket.on('accelerate-hero', function(roomId) {
+    socket.to(roomId).broadcast.emit('accelerate-opponent');
+  });
+  socket.on('unshift-hero', function(roomId, data) {
+    socket.to(roomId).broadcast.emit('unshift-opponent', data);
+  });
+  socket.on('pop-hero', function(roomId) {
+    socket.to(roomId).broadcast.emit('pop-opponent');
+  });
+  socket.on('update-food-position', function(roomId, pos) {
+    socket.to(roomId).broadcast.emit('update-food-position', pos);
+  });
+  socket.on('add-extra-food', function(roomId, coords) {
+    socket.to(roomId).broadcast.emit('add-extra-food', coords);
+  });
+  socket.on('remove-extra-food', function(roomId, index) {
+    socket.to(roomId).broadcast.emit('remove-extra-food', index);
+  });
+  socket.on('game-over:hero-self-destruct', function(roomId) {
+    socket.to(roomId).broadcast.emit('game-over:opponent-self-destruct');
+  });
+  socket.on('game-over:heads-collide', function(roomId) {
+    socket.to(roomId).broadcast.emit('game-over:MAD');
+  });
+  socket.on('game-over:hero-win', function(roomId) {
+    socket.to(roomId).broadcast.emit('game-over:opponent-win');
   });
 });
-
-
 
 server.listen(PORT, () => {
   console.log('snake socket server lisenting on port', PORT);
