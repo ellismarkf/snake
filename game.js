@@ -396,13 +396,6 @@ function main() {
 
 function initGame() {
   bindEvents();
-  // bindLocalTwoPlayerEvents();
-  // food[foodLength] = placeFood();
-  // hero = initSnake({});
-  // opponent = initSnake({
-  //   color: 'blue',
-  //   startY: 50,
-  // });
   updateSnake = initSnakeUpdate(hero);
   then = performance.now();
   running = 1;
