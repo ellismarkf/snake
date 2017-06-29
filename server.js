@@ -24,6 +24,7 @@ function buildHostInit(id) {
     color: 'white',
     frozen: 0,
     id: id,
+    player: 0,
   };
 }
 
@@ -37,6 +38,7 @@ function buildGuestInit(id) {
     color: 'blue',
     frozen: 0,
     id: id,
+    player: 1,
   };
 }
 

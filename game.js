@@ -7,6 +7,11 @@ const ctx = canvas.getContext("2d");
 const startBtn = document.getElementById('start');
 const createBtn = document.getElementById('create');
 const joinBtn = document.getElementById('join');
+const heroSprite = new Image();
+heroSprite.src = './sprite.gif';
+const oppntSprite = new Image();
+oppntSprite.src = './pink.gif';
+const sprites = [heroSprite, oppntSprite];
 
 const socket = window.io();
 const RIGHT = 1;
@@ -44,7 +49,7 @@ const MAX_SPEED = 50;
 let direction = RIGHT;
 canvas.height = height;
 canvas.width = width;
-let snakeId = 1;
+let snakeId = 0;
 let gameId;
 
 let hostOpts;
@@ -105,14 +110,134 @@ function initSnake(init) {
   snake.direction = CURRENT_DIRECTION;
   snake.color = color;
   snake.id = id;
-  snakeId++;
+  snake.player = init.player;
   return snake;
 }
 
+function pincers(direction,x,y) {
+  switch(direction) {
+    case RIGHT:
+      return [x + (cell - 2), y - 2, 370, 110, 150, 10, 13.6];
+    case LEFT:
+      return [x - (cell - 2), y - 2, 110, 110, 150, 10, 13.6];
+    case UP:
+      return [x - 2, y - (cell - 2), 000, 150, 110, 13.6, 10];
+    case DOWN:
+      return [x - 2, y + (cell - 2), 260, 150, 110, 13.6, 10];
+   default:
+    return [x - 2, y - (cell - 2), 000, 150, 110, 13.6, 10];
+  }
+}
+
+function rattler(direction,x,y) {
+  switch(direction) {
+    case RIGHT:
+      return [x - (cell - 2), y + 1, 2550, 90, 90, 8.18, 8.18];
+    case LEFT:
+      return [x + cell, y + 1, 2370, 90, 90, 8.18, 8.18];
+    case UP:
+      return [x + 1, y + cell, 2280, 90, 90, 8.18, 8.18];
+    case DOWN:
+      return [x + 1, y - (cell - 2), 2460, 90, 90, 8.18, 8.18];
+   default:
+    return [x + 1, y + cell, 2280, 90, 90, 8.18, 8.18];
+  }
+}
+
+function headOffset(direction) {
+  switch(direction) {
+    case RIGHT:
+      return 850;
+    case LEFT:
+      return 630;
+    case UP:
+      return 520;
+    case DOWN:
+      return 740;
+   default:
+    return 520;
+  }
+}
+
+function evenBodyOffset(direction) {
+  switch(direction) {
+    case RIGHT:
+      return 1290;
+    case LEFT:
+      return 1070;
+    case UP:
+      return 960;
+    case DOWN:
+      return 1180;
+   default:
+    return 960;
+  }
+}
+
+function oddBodyOffset(direction) {
+  switch(direction) {
+    case RIGHT:
+      return 1730;
+    case LEFT:
+      return 1510;
+    case UP:
+      return 1400;
+    case DOWN:
+      return 1620;
+   default:
+    return 1400;
+  }
+}
+
+function tailOffset(direction) {
+  switch(direction) {
+    case RIGHT:
+      return 2170;
+    case LEFT:
+      return 1950;
+    case UP:
+      return 1840;
+    case DOWN:
+      return 2060;
+   default:
+    return 1840;
+  }
+}
+
+const sX = 0;
+const w = 110;
+const h = 110;
+const dW = cell;
+const dH = cell;
+
 function drawSnake(snake, ctx) {
-  ctx.fillStyle = snake.color || 'green';
-  snake.forEach(function(segment) {
-    ctx.fillRect(segment[0], segment[1], cell, cell);
+  // ctx.fillStyle = snake.color || 'green';
+  let sprite = sprites[snake.player];
+  snake.forEach(function(segment, index) {
+    // ctx.fillRect(segment[0], segment[1], cell, cell);
+    const [x,y,dir] = segment;
+    if (index === 0) {
+      const [pX,pY,psY,psW,psH,pdW,pdH] = pincers(dir,x,y);
+      const sY = headOffset(dir);
+      ctx.drawImage(sprite, sX,sY,w,h,x,y,dW,dH);
+      ctx.drawImage(sprite, sX,psY,psW,psH,pX,pY,pdW,pdH);
+      return 1;
+    }
+    if (index === snake.length - 1) {
+      const [rX,rY,rsY,rsW,rsH,rdW,rdH] = rattler(dir,x,y);
+      const sY = tailOffset(dir);
+      ctx.drawImage(sprite, sX,sY,w,h,x,y,dW,dH);
+      ctx.drawImage(sprite, sX,rsY,rsW,rsH,rX,rY,rdW,rdH);
+      return 1;
+    }
+    if (index > 0 && index % 2 === 0) {
+      const sY = evenBodyOffset(dir);
+      ctx.drawImage(sprite, sX,sY,w,h,x,y,dW,dH);
+      return 1;
+    }
+    const sY = oddBodyOffset(dir);
+    ctx.drawImage(sprite, sX,sY,w,h,x,y,dW,dH);
+    return 1;
   });
 }
 
