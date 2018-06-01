@@ -7,11 +7,11 @@ const ctx = canvas.getContext("2d");
 const startBtn = document.getElementById('start');
 const createBtn = document.getElementById('create');
 const joinBtn = document.getElementById('join');
-const heroSprite = new Image();
-heroSprite.src = './sprite.gif';
-const oppntSprite = new Image();
-oppntSprite.src = './pink.gif';
-const sprites = [heroSprite, oppntSprite];
+// const heroSprite = new Image();
+// heroSprite.src = './sprite.gif';
+// const oppntSprite = new Image();
+// oppntSprite.src = './pink.gif';
+// const sprites = [heroSprite, oppntSprite];
 
 const socket = window.io();
 const RIGHT = 1;
@@ -211,33 +211,33 @@ const dW = cell;
 const dH = cell;
 
 function drawSnake(snake, ctx) {
-  // ctx.fillStyle = snake.color || 'green';
-  let sprite = sprites[snake.player];
+  ctx.fillStyle = snake.color || 'green';
+  // let sprite = sprites[snake.player];
   snake.forEach(function(segment, index) {
-    // ctx.fillRect(segment[0], segment[1], cell, cell);
     const [x,y,dir] = segment;
-    if (index === 0) {
-      const [pX,pY,psY,psW,psH,pdW,pdH] = pincers(dir,x,y);
-      const sY = headOffset(dir);
-      ctx.drawImage(sprite, sX,sY,w,h,x,y,dW,dH);
-      ctx.drawImage(sprite, sX,psY,psW,psH,pX,pY,pdW,pdH);
-      return 1;
-    }
-    if (index === snake.length - 1) {
-      const [rX,rY,rsY,rsW,rsH,rdW,rdH] = rattler(dir,x,y);
-      const sY = tailOffset(dir);
-      ctx.drawImage(sprite, sX,sY,w,h,x,y,dW,dH);
-      ctx.drawImage(sprite, sX,rsY,rsW,rsH,rX,rY,rdW,rdH);
-      return 1;
-    }
-    if (index > 0 && index % 2 === 0) {
-      const sY = evenBodyOffset(dir);
-      ctx.drawImage(sprite, sX,sY,w,h,x,y,dW,dH);
-      return 1;
-    }
-    const sY = oddBodyOffset(dir);
-    ctx.drawImage(sprite, sX,sY,w,h,x,y,dW,dH);
-    return 1;
+    ctx.fillRect(x, y, cell, cell);
+    // if (index === 0) {
+    //   const [pX,pY,psY,psW,psH,pdW,pdH] = pincers(dir,x,y);
+    //   const sY = headOffset(dir);
+    //   ctx.drawImage(sprite, sX,sY,w,h,x,y,dW,dH);
+    //   ctx.drawImage(sprite, sX,psY,psW,psH,pX,pY,pdW,pdH);
+    //   return 1;
+    // }
+    // if (index === snake.length - 1) {
+    //   const [rX,rY,rsY,rsW,rsH,rdW,rdH] = rattler(dir,x,y);
+    //   const sY = tailOffset(dir);
+    //   ctx.drawImage(sprite, sX,sY,w,h,x,y,dW,dH);
+    //   ctx.drawImage(sprite, sX,rsY,rsW,rsH,rX,rY,rdW,rdH);
+    //   return 1;
+    // }
+    // if (index > 0 && index % 2 === 0) {
+    //   const sY = evenBodyOffset(dir);
+    //   ctx.drawImage(sprite, sX,sY,w,h,x,y,dW,dH);
+    //   return 1;
+    // }
+    // const sY = oddBodyOffset(dir);
+    // ctx.drawImage(sprite, sX,sY,w,h,x,y,dW,dH);
+    // return 1;
   });
 }
 

@@ -4,16 +4,17 @@
     <title></title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="./style.css">
   </head>
   <body>
-    <canvas id="snake-game" height="500" width="500"></canvas>
-    <div>
+    <h1>Snake</h1>
+    <div class="controls-row">
       <button id="create">Create Game</button>
       <button id="join">Join Game</button>
       <button id="start">Start Game</button>
     </div>
+    <canvas id="snake-game" height="500" width="500"></canvas>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
-    <script src="./dq.js"></script>
     <script src="./snaque.js"></script>
     <script src="./game.js"></script>
   </body>
