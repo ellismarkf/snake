@@ -42,6 +42,31 @@ function Snaque(capacity) {
   this._directions = new Int32Array(this._capacity).fill(-1);
 }
 
+class Snaque {
+  constructor(options) {
+    super(options)
+    let speed = init.speed || DEFAULT_SPEED;
+    let direction = init.direction || DEFAULT_DIRECTION;
+    let color = init.color || 'white';
+    let frozen = init.frozen || 0;
+    let id = init.id || snakeId;
+
+    snake.speed = speed;
+    snake.direction = direction;
+    snake.color = color;
+    snake.id = id;
+    snake.player = init.player;
+    snake.frozen = frozen;
+    this._capacity = toBinary(capacity);
+    this._length = 0;
+    this._head = 0;
+    this._tail = 0;
+    this._x = new Int32Array(this._capacity).fill(-1);
+    this._y = new Int32Array(this._capacity).fill(-1);
+    this._directions = new Int32Array(this._capacity).fill(-1);
+  }
+}
+
 Snaque.prototype._nextTailIdx = function Snaque$_nextTailIdx() {
   return (this._head + this._length) & (this._capacity - 1);
 }

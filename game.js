@@ -7,54 +7,46 @@ const ctx = canvas.getContext("2d");
 const startBtn = document.getElementById('start');
 const createBtn = document.getElementById('create');
 const joinBtn = document.getElementById('join');
-// const heroSprite = new Image();
-// heroSprite.src = './sprite.gif';
-// const oppntSprite = new Image();
-// oppntSprite.src = './pink.gif';
-// const sprites = [heroSprite, oppntSprite];
 
 const socket = window.io();
 const RIGHT = 1;
 const LEFT = 2;
 const UP = 3;
 const DOWN = 4;
-const opposite = {
+const OPPOSITE = {
 	[LEFT]: RIGHT,
 	[RIGHT]: LEFT,
 	[UP]: DOWN,
 	[DOWN]: UP,
 };
-const controlsMap = {
+const CONTROLS_MAP = {
 	37: LEFT,
 	38: UP,
 	39: RIGHT,
 	40: DOWN,
 };
-const directionMap = {
+const DIRECTION_MAP = {
 	[LEFT]: 37,
 	[UP]: 38,
 	[RIGHT]: 39,
 	[DOWN]: 40,
 };
+const DEFAULT_DIRECTION = RIGHT;
 let CURRENT_DIRECTION = RIGHT;
-const width = 500;
-const height = 500;
-const cell = 10;
+const GRID_WIDTH = 500;
+const GRID_HEIGHT = 500;
+const CELL_SIZE = 10;
 const MS_PER_UPDATE = 16;
+const DEFAULT_SPEED = 150;
 let then = performance.now();
 let running = 0;
 let lag = 0.0;
-let DEFAULT_SPEED = 150;
-const MAX_SPEED = 50;
-let direction = RIGHT;
-canvas.height = height;
-canvas.width = width;
+
+canvas.height = GRID_HEIGHT;
+canvas.width = GRID_WIDTH;
+
 let snakeId = 0;
 let gameId;
-
-let hostOpts;
-let guestOpts;
-
 let hero;
 let opponent;
 let updateSnake;
@@ -72,8 +64,8 @@ let foodLength = 0;
 
 function placeFood() {
   return [
-    Math.floor(Math.random() * width/10) * 10,
-    Math.floor(Math.random() * height/10) * 10,
+    Math.floor(Math.random() * GRID_WIDTH/10) * 10,
+    Math.floor(Math.random() * GRID_HEIGHT/10) * 10,
   ];
 }
 
@@ -82,7 +74,7 @@ function drawFood(food, ctx) {
     if (food[i] === 0) continue;
     const [x, y] = food[i];
     ctx.fillStyle = 'red';
-    ctx.fillRect(x,y,cell,cell);
+    ctx.fillRect(x,y,CELL_SIZE,CELL_SIZE);
   }
 }
 
@@ -97,182 +89,78 @@ function initSnake(init) {
   let startX = init.startX || 250;
   let startY = init.startY || 250
   let speed = init.speed || DEFAULT_SPEED;
-  let direction = init.direction || CURRENT_DIRECTION;
+  let direction = init.direction || DEFAULT_DIRECTION;
   let length = init.length || 5;
   let color = init.color || 'white';
   let frozen = init.frozen || 0;
   let id = init.id || snakeId;
-  let snake = new window.Snaque((width * height) / 100);
+  let snake = new window.Snaque((GRID_WIDTH * GRID_HEIGHT) / 100);
   for(let i = 0; i < length; i++) {
-    snake.push([startX - (i * 10), startY, CURRENT_DIRECTION]);
+    snake.push([startX - (i * 10), startY, DEFAULT_DIRECTION]);
   }
   snake.speed = speed;
-  snake.direction = CURRENT_DIRECTION;
+  snake.direction = direction;
   snake.color = color;
   snake.id = id;
   snake.player = init.player;
+  snake.frozen = frozen;
   return snake;
 }
 
-function pincers(direction,x,y) {
-  switch(direction) {
-    case RIGHT:
-      return [x + (cell - 2), y - 2, 370, 110, 150, 10, 13.6];
-    case LEFT:
-      return [x - (cell - 2), y - 2, 110, 110, 150, 10, 13.6];
-    case UP:
-      return [x - 2, y - (cell - 2), 000, 150, 110, 13.6, 10];
-    case DOWN:
-      return [x - 2, y + (cell - 2), 260, 150, 110, 13.6, 10];
-   default:
-    return [x - 2, y - (cell - 2), 000, 150, 110, 13.6, 10];
-  }
-}
-
-function rattler(direction,x,y) {
-  switch(direction) {
-    case RIGHT:
-      return [x - (cell - 2), y + 1, 2550, 90, 90, 8.18, 8.18];
-    case LEFT:
-      return [x + cell, y + 1, 2370, 90, 90, 8.18, 8.18];
-    case UP:
-      return [x + 1, y + cell, 2280, 90, 90, 8.18, 8.18];
-    case DOWN:
-      return [x + 1, y - (cell - 2), 2460, 90, 90, 8.18, 8.18];
-   default:
-    return [x + 1, y + cell, 2280, 90, 90, 8.18, 8.18];
-  }
-}
-
-function headOffset(direction) {
-  switch(direction) {
-    case RIGHT:
-      return 850;
-    case LEFT:
-      return 630;
-    case UP:
-      return 520;
-    case DOWN:
-      return 740;
-   default:
-    return 520;
-  }
-}
-
-function evenBodyOffset(direction) {
-  switch(direction) {
-    case RIGHT:
-      return 1290;
-    case LEFT:
-      return 1070;
-    case UP:
-      return 960;
-    case DOWN:
-      return 1180;
-   default:
-    return 960;
-  }
-}
-
-function oddBodyOffset(direction) {
-  switch(direction) {
-    case RIGHT:
-      return 1730;
-    case LEFT:
-      return 1510;
-    case UP:
-      return 1400;
-    case DOWN:
-      return 1620;
-   default:
-    return 1400;
-  }
-}
-
-function tailOffset(direction) {
-  switch(direction) {
-    case RIGHT:
-      return 2170;
-    case LEFT:
-      return 1950;
-    case UP:
-      return 1840;
-    case DOWN:
-      return 2060;
-   default:
-    return 1840;
-  }
-}
-
-const sX = 0;
-const w = 110;
-const h = 110;
-const dW = cell;
-const dH = cell;
-
 function drawSnake(snake, ctx) {
   ctx.fillStyle = snake.color || 'green';
-  // let sprite = sprites[snake.player];
   snake.forEach(function(segment, index) {
     const [x,y,dir] = segment;
-    ctx.fillRect(x, y, cell, cell);
-    // if (index === 0) {
-    //   const [pX,pY,psY,psW,psH,pdW,pdH] = pincers(dir,x,y);
-    //   const sY = headOffset(dir);
-    //   ctx.drawImage(sprite, sX,sY,w,h,x,y,dW,dH);
-    //   ctx.drawImage(sprite, sX,psY,psW,psH,pX,pY,pdW,pdH);
-    //   return 1;
-    // }
-    // if (index === snake.length - 1) {
-    //   const [rX,rY,rsY,rsW,rsH,rdW,rdH] = rattler(dir,x,y);
-    //   const sY = tailOffset(dir);
-    //   ctx.drawImage(sprite, sX,sY,w,h,x,y,dW,dH);
-    //   ctx.drawImage(sprite, sX,rsY,rsW,rsH,rX,rY,rdW,rdH);
-    //   return 1;
-    // }
-    // if (index > 0 && index % 2 === 0) {
-    //   const sY = evenBodyOffset(dir);
-    //   ctx.drawImage(sprite, sX,sY,w,h,x,y,dW,dH);
-    //   return 1;
-    // }
-    // const sY = oddBodyOffset(dir);
-    // ctx.drawImage(sprite, sX,sY,w,h,x,y,dW,dH);
-    // return 1;
+    ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
   });
 }
 
-function outOfBounds(direction, x, y) {
+function detectOutOfBounds(direction, x, y) {
   switch(direction) {
     case RIGHT:
-      return x > width - (cell * 2);
+      return x > GRID_WIDTH - (CELL_SIZE * 2);
     case LEFT:
-      return x - cell < 0;
+      return x - CELL_SIZE < 0;
     case UP:
-      return y - cell < 0;
+      return y - CELL_SIZE < 0;
     case DOWN:
-      return y > height - (cell * 2);
+      return y > GRID_HEIGHT - (CELL_SIZE * 2);
    default:
     return false;
   }
 }
 
-function newHeadPos(direction, x, y) {
+function getNewHeadPos(direction, x, y) {
   switch(direction) {
     case RIGHT:
-      return [x + cell, y, direction];
+      return [x + CELL_SIZE, y, direction];
     case LEFT:
-      return [x - cell, y, direction];
+      return [x - CELL_SIZE, y, direction];
     case UP:
-      return [x, y - cell, direction];
+      return [x, y - CELL_SIZE, direction];
     case DOWN:
-      return [x, y + cell, direction];
+      return [x, y + CELL_SIZE, direction];
    default:
     return [x, y, direction];
   }
 }
 
-function collision(x,y,bX,bY) {
+function detectCollision(x,y,bX,bY) {
   return x === bX && y === bY;
+}
+
+function detectAutoCannibalism(snake,x,y) {
+  return !snake.everyFrom(function(segment) {
+    const [bX, bY] = segment;
+    return !(detectCollision(x,y,bX,bY))
+  }, 1)
+}
+
+function getOpponentCollisionIdx(opponent,x,y) {
+  return opponent.findIndex(function(segment) {
+    const [bX,bY] = segment;
+    return detectCollision(x,y,bX,bY);
+  })
 }
 
 function logTick(x,y,hX,hY,tX,tY) {
@@ -281,12 +169,8 @@ function logTick(x,y,hX,hY,tX,tY) {
 
 function advance(snake) {
   let [x, y] = snake.head();
-  let [oX, oY] = opponent.head();
-  const autoCannibalism = !snake.everyFrom(function(segment) {
-    let [bX, bY] = segment;
-    return !(collision(x,y,bX,bY));
-  }, 1);
-  const boundaryViolation = outOfBounds(snake.direction, x, y);
+  const autoCannibalism = detectAutoCannibalism(snake,x,y);
+  const boundaryViolation = detectOutOfBounds(snake.direction, x, y);
   if (boundaryViolation || autoCannibalism) {
     running = 0;
     console.log('game over - hero self destruct');
@@ -294,10 +178,7 @@ function advance(snake) {
     alert('You self-destructed.  You lose.');
     return -1;
   }
-  const opponentCollisionIdx = opponent.findIndex(function(segment) {
-    let [bX, bY] = segment;
-    return collision(x,y,bX,bY);
-  });
+  const opponentCollisionIdx = getOpponentCollisionIdx(opponent,x,y);
   if (opponent.frozen && opponentCollisionIdx < 0) {
     socket.emit('unfreeze-opponent', gameId);
     opponent.frozen = 0;
@@ -321,10 +202,10 @@ function advance(snake) {
       return -1;
     } else {
       socket.emit('pop-opponent', gameId);
-      socket.emit('unshift-hero', gameId, newHeadPos(snake.direction,x,y));
+      socket.emit('unshift-hero', gameId, getNewHeadPos(snake.direction,x,y));
       socket.emit('accelerate-hero', gameId);
       opponent.pop();
-      snake.unshift(newHeadPos(snake.direction, x, y));
+      snake.unshift(getNewHeadPos(snake.direction, x, y));
       snake.speed -= 10;
       return 1;
     }
@@ -339,10 +220,10 @@ function advance(snake) {
       food[foodLength] = sliced[i];
     }
   }
-  socket.emit('unshift-hero', gameId, newHeadPos(snake.direction,x,y));
-  snake.unshift(newHeadPos(snake.direction, x, y));
+  socket.emit('unshift-hero', gameId, getNewHeadPos(snake.direction,x,y));
+  snake.unshift(getNewHeadPos(snake.direction, x, y));
   let fIdx = food.findIndex(function(food) {
-    return collision(x,y,food[0],food[1])
+    return detectCollision(x,y,food[0],food[1])
   });
   if (fIdx > -1) {
     const [fX, fY] = food[fIdx];
@@ -366,7 +247,7 @@ function advance(snake) {
 }
 
 function processInput(snake) {
-  if (CURRENT_DIRECTION !== opposite[snake.direction]) {
+  if (CURRENT_DIRECTION !== OPPOSITE[snake.direction]) {
     snake.direction = CURRENT_DIRECTION;
   }
 }
@@ -394,19 +275,8 @@ function bindEvents() {
   document.addEventListener('keydown', function(event) {
     let key = event.keyCode;
     if (key === 32) running = 0;
-    let vector = controlsMap[key];
+    let vector = CONTROLS_MAP[key];
     if (vector) CURRENT_DIRECTION = vector;
-  });
-}
-
-function bindLocalTwoPlayerEvents() {
-  document.addEventListener('keydown', function(event) {
-    let key = event.keyCode;
-    if (key === 32) running = 0;
-    let snakeVector = controlsMap[key];
-    let opponentVector = o_controlsMap[key];
-    if (snakeVector) CURRENT_DIRECTION = snakeVector;
-    if (opponentVector) OPPONENT_DIRECTION = opponentVector;
   });
 }
 
@@ -480,7 +350,7 @@ socket.on('game-over:opponent-win', function() {
 
 function clear() {
   ctx.fillStyle = 'black';
-  ctx.fillRect(0,0,width, height);
+  ctx.fillRect(0,0,GRID_WIDTH, GRID_HEIGHT);
 };
 
 function draw() {
