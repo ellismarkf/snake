@@ -7,29 +7,29 @@ const Y = 1;
 const DIR = 2;
 
 function nearestPowerOf2(n) {
-    n = n >>> 0;
-    n = n - 1;
-    n = n | (n >> 1);
-    n = n | (n >> 2);
-    n = n | (n >> 4);
-    n = n | (n >> 8);
-    n = n | (n >> 16);
-    return n + 1;
+  n = n >>> 0;
+  n = n - 1;
+  n = n | (n >> 1);
+  n = n | (n >> 2);
+  n = n | (n >> 4);
+  n = n | (n >> 8);
+  n = n | (n >> 16);
+  return n + 1;
 }
 
 function toBinary(capacity) {
-    if (typeof capacity !== "number") {
-        if (isArray(capacity)) {
-            capacity = capacity.length;
-        }
-        else {
-            return MIN_CAPACITY;
-        }
+  if (typeof capacity !== "number") {
+    if (Array.isArray(capacity)) {
+      capacity = capacity.length;
     }
-    return nearestPowerOf2(
-        Math.min(
-            Math.max(MIN_CAPACITY, capacity), MAX_CAPACITY)
-    );
+    else {
+      return MIN_CAPACITY;
+    }
+  }
+  return nearestPowerOf2(
+    Math.min(
+      Math.max(MIN_CAPACITY, capacity), MAX_CAPACITY)
+  );
 }
 
 function Snaque(capacity) {
@@ -40,31 +40,6 @@ function Snaque(capacity) {
   this._x = new Int32Array(this._capacity).fill(-1);
   this._y = new Int32Array(this._capacity).fill(-1);
   this._directions = new Int32Array(this._capacity).fill(-1);
-}
-
-class Snaque {
-  constructor(options) {
-    super(options)
-    let speed = init.speed || DEFAULT_SPEED;
-    let direction = init.direction || DEFAULT_DIRECTION;
-    let color = init.color || 'white';
-    let frozen = init.frozen || 0;
-    let id = init.id || snakeId;
-
-    snake.speed = speed;
-    snake.direction = direction;
-    snake.color = color;
-    snake.id = id;
-    snake.player = init.player;
-    snake.frozen = frozen;
-    this._capacity = toBinary(capacity);
-    this._length = 0;
-    this._head = 0;
-    this._tail = 0;
-    this._x = new Int32Array(this._capacity).fill(-1);
-    this._y = new Int32Array(this._capacity).fill(-1);
-    this._directions = new Int32Array(this._capacity).fill(-1);
-  }
 }
 
 Snaque.prototype._nextTailIdx = function Snaque$_nextTailIdx() {
@@ -81,7 +56,7 @@ Snaque.prototype._nextHeadIdx = function Snaque$_nextHeadIdx() {
 
 Snaque.prototype._prevHeadIdx = function Snaque$_prevHeadIdx() {
   let capacity = this._capacity;
-  return (((( this._head - 1 ) & ( capacity - 1) ) ^ capacity ) - capacity );
+  return ((((this._head - 1) & (capacity - 1)) ^ capacity) - capacity);
 }
 
 Snaque.prototype._getIdx = function Snaque$_getIdx(n) {
