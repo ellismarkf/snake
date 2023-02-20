@@ -11,7 +11,7 @@
     "express": "^4.15.3",
     "fast-list": "^1.0.3",
     "helmet": "^3.6.1",
-    "socket.io": "^2.4.0"
+    "socket.io": "^4.6.1"
   },
   "scripts": {
     "start": "node server.js"
