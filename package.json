@@ -10,7 +10,7 @@
     "body-parser": "^1.17.2",
     "express": "^4.15.3",
     "fast-list": "^1.0.3",
-    "helmet": "^3.6.1",
+    "helmet": "^6.1.5",
     "socket.io": "^2.4.0"
   },
   "scripts": {
